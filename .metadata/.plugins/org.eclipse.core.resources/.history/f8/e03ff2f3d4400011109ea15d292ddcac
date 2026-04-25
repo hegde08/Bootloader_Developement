@@ -1,0 +1,13 @@
+/*
+ * secure_wrapper.c
+ *
+ *  Created on: Apr 25, 2026
+ *      Author: hegde
+ */
+
+#ifndef SRC_SECURE_WRAPPER_C_
+#define SRC_SECURE_WRAPPER_C_
+
+#include "secure_wrapper.h"
+
+#endif /* SRC_SECURE_WRAPPER_C_ */

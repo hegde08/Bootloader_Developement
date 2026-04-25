@@ -103,7 +103,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 
     /* USER CODE END WHILE */
-  printmsg("Hello from Application\n\r");
+  while(1)
+  {
+	  printmsg("Hello from Application\n\r");
+  }
 
     /* USER CODE BEGIN 3 */
   /* USER CODE END 3 */

@@ -1,0 +1,106 @@
+/*
+ * secure_wrapper.c
+ *
+ *  Created on: Apr 25, 2026
+ *      Author: hegde
+ */
+
+#ifndef SRC_SECURE_WRAPPER_C_
+#define SRC_SECURE_WRAPPER_C_
+
+#include "secure_wrapper.h"
+
+#endif /* SRC_SECURE_WRAPPER_C_ */
+
+#include "cmox_crypto.h"
+
+uint8_t publicKey[64] = {0xca,0xcb,0xdd,0xe7,0x8a,0xb3,0x8d,0x78,
+		0xa0,0x4e,0x98,0x74,0x71,0x4e,0xd2,0x11,
+		0x1c,0x6b,0x32,0x6e,0xb5,0xdf, 0x6f,0x2b,
+		0x2e,0xc4,0x3f,0x06,0x37,0xf4,0x4d,0x84,
+		0x41,0xca,0x87,0x92,0x5a,0xe9,0x97,0x50,
+		0xa8,0x14,0xe5,0x90,0x7c,0x92,0xce,0xf9,
+		0xa7,0xe8,0x26,0x1c,0x3d,0x59,0x87,0x4b,
+		0x12,0x66,0xd5,0x9b,0x41,0x20,0x49,0x10
+};
+
+// 1. Define the ECC handle and the math engine
+cmox_ecc_handle_t EccCtx;
+
+// Use the Math engine that corresponds to your library (usually Default or LowMem)
+extern const cmox_ecc_math_t CMOX_ECC_MATH_FUNCS_DEFAULT;
+
+// 2. Define a working area.
+// The size depends on the curve. For SECP256R1, 2KB is usually plenty.
+#define ECC_WORKING_AREA_SIZE 2048
+uint32_t WorkingArea[ECC_WORKING_AREA_SIZE / sizeof(uint32_t)];
+
+void init_ecc_system(void) {
+    cmox_ecc_retval_t status;
+
+    // Initialize the library (if not already done globally)
+    if (cmox_initialize(NULL) != CMOX_CIPHER_RETVAL_SUCCESS) {
+        // Handle initialization error
+    }
+
+    // Construct the ECC handle
+    status = cmox_ecc_construct(&EccCtx,                  // The handle
+                                CMOX_ECC_MATH_FUNCS_DEFAULT, // Math engine
+                                WorkingArea,              // Buffer
+                                sizeof(WorkingArea));     // Buffer size
+
+    if (status != CMOX_ECC_AUTH_SUCCESS) {
+        // Handle construction error (e.g., buffer too small)
+    }
+}
+
+void Calculate_Firmware_Hash(uint8_t *output_digest, uint32_t startAddress, uint16_t size)
+{
+    cmox_hash_retval_t retval;
+    size_t generated_length = 0;
+
+    /* 1. Create a pointer that looks directly at the Flash memory */
+    const uint8_t *firmware_in_flash = (const uint8_t *)startAddress;
+
+    /* 2. Execute the Single-Shot API */
+    retval = cmox_hash_compute(
+        CMOX_SHA256_ALGO,          // The algorithm to use
+        firmware_in_flash,         // Pointer directly to Flash memory
+		size,    // 32,768 bytes
+        output_digest,             // The array where the 32-byte hash will be saved
+        32,                        // We expect a 32-byte digest for SHA-256
+        &generated_length          // ST requires this parameter to confirm length
+    );
+
+    /* 3. Check for success */
+    if (retval != CMOX_HASH_SUCCESS)
+    {
+        printmsg("ERROR: Hash computation failed!\r\n");
+        // Handle error (e.g., erase the first page)
+    }
+}
+
+void Calculate_Signature(uint8_t* outputDigest, uint8_t* signatureRec)
+{
+	uint32_t fault_check = 0;
+	cmox_ecc_retval_t status;
+
+	status = cmox_ecdsa_verify(
+	    &EccCtx,                        // Your initialized ECC handle
+	    CMOX_ECC_SECP256R1_HIGHMEM,     // Matches NIST256p
+	    publicKey,                      // Raw Public Key bytes
+	    64,                             // PubKey length (uncompressed is usually 64)
+	    outputDigest,                   // Your 32-byte hash
+	    32,                             // Digest length
+	    signatureRec,                   // The 64-byte R+S signature
+	    64,                             // Signature length
+	    &fault_check                    // Fault check variable
+	);
+
+	// Strict check as per the library @note
+	if ((status == CMOX_ECC_AUTH_SUCCESS) && (fault_check == CMOX_ECC_AUTH_SUCCESS)) {
+	    // Signature is valid
+	} else {
+	    // Verification failed or fault detected
+	}
+}

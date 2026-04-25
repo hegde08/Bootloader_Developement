@@ -12,33 +12,16 @@ Flash_HAL_INV_ADDR                                  = 0x04
 
 #BL Commands
 COMMAND_BL_GET_VER                                  = 0x80
-COMMAND_BL_GET_HELP                                 = 0x52
-COMMAND_BL_GET_CID                                  =0x53
-COMMAND_BL_GET_RDP_STATUS                           =0x54
-COMMAND_BL_GO_TO_ADDR                               =0x55
 COMMAND_BL_FLASH_ERASE                              =0x81
-COMMAND_BL_MEM_WRITE                                =0x83
-COMMAND_BL_EN_R_W_PROTECT                           =0x58
-COMMAND_BL_MEM_READ                                 =0x59
-COMMAND_BL_READ_SECTOR_P_STATUS                     =0x5A
-COMMAND_BL_OTP_READ                                 =0x5B
-COMMAND_BL_DIS_R_W_PROTECT                          =0x5C
-COMMAND_BL_MY_NEW_COMMAND                           =0x5D
 COMMAND_BL_MEM_WRITE_PREPARE                        =0x82
+COMMAND_BL_MEM_WRITE                                =0x83
+
 
 
 #len details of the command
 COMMAND_BL_GET_VER_LEN                              =1
-COMMAND_BL_GET_HELP_LEN                             =6
-COMMAND_BL_GET_CID_LEN                              =6
-COMMAND_BL_GET_RDP_STATUS_LEN                       =6
-COMMAND_BL_GO_TO_ADDR_LEN                           =10
 COMMAND_BL_FLASH_ERASE_LEN                          =6
 COMMAND_BL_MEM_WRITE_LEN                            = 11
-COMMAND_BL_EN_R_W_PROTECT_LEN                       =8
-COMMAND_BL_READ_SECTOR_P_STATUS_LEN                 =6
-COMMAND_BL_DIS_R_W_PROTECT_LEN                      =6
-COMMAND_BL_MY_NEW_COMMAND_LEN                       =8
 COMMAND_BL_MEM_WRITE_PREPARE_LEN                    =7
 
 
@@ -47,13 +30,13 @@ mem_write_active =0
 
 #----------------------------- file ops----------------------------------------
 
-def calc_file_len():
-    size = os.path.getsize("Application.bin")
+def calc_file_len(filename):
+    size = os.path.getsize(filename)
     return size
 
-def open_the_file():
+def open_the_file(filename):
     global bin_file
-    bin_file = open('Application.bin','rb')
+    bin_file = open(filename,'rb')
     #read = bin_file.read()
     #global file_contents = bytearray(read)
 
@@ -396,8 +379,8 @@ def decode_menu_command_code(command):
         print("\n   Command == > BL_FLASH_ERASE")
         data_buf[0] = COMMAND_BL_FLASH_ERASE
         data_buf[1] = 0x08
-        data_buf[2] = 0x00
-        data_buf[3] = 0x80
+        data_buf[2] = 0x02
+        data_buf[3] = 0x00
         data_buf[4] = 0x00
         data_buf[5] = 16
         for i in data_buf[0:COMMAND_BL_FLASH_ERASE_LEN]:
@@ -416,10 +399,10 @@ def decode_menu_command_code(command):
         data_buf[0] = COMMAND_BL_MEM_WRITE
 
         #First get the total number of bytes in the .bin file.
-        t_len_of_file =calc_file_len()
+        t_len_of_file =calc_file_len("Application.bin")
 
         #keep opening the file
-        open_the_file()
+        open_the_file("Application.bin")
 
         bytes_remaining = t_len_of_file - bytes_so_far_sent
 
@@ -437,9 +420,6 @@ def decode_menu_command_code(command):
                 file_read_value = bin_file.read(1)
                 file_read_value = bytearray(file_read_value)
                 data_buf[2+x]= int(file_read_value[0])
-
-            #read_the_file(&data_buf[7],len_to_read) 
-            #print("\n   base mem address = \n",base_mem_address, hex(base_mem_address)) 
             
             mem_write_cmd_total_len = 258
 
@@ -453,6 +433,23 @@ def decode_menu_command_code(command):
             print("\n   bytes_so_far_sent:{0} -- bytes_remaining:{1}\n".format(bytes_so_far_sent,bytes_remaining)) 
         
             ret_value = read_bootloader_reply(data_buf[0])
+        
+        #First get the total number of bytes in the .bin file.
+        t_len_of_file =calc_file_len("Application.sig")
+        print("\n   t_len_of_file :{0}\n".format(t_len_of_file))
+
+        #keep opening the file
+        open_the_file("Application.sig")
+
+        for x in range(t_len_of_file):
+                file_read_value = bin_file.read(1)
+                file_read_value = bytearray(file_read_value)
+                data_buf[x]= int(file_read_value[0])
+
+        for i in data_buf[0:t_len_of_file]:
+            Write_to_serial_port(i,t_len_of_file)
+
+
         mem_write_active=0
 
             
@@ -486,7 +483,7 @@ def decode_menu_command_code(command):
     elif(command == 15):
         print("\n   Command == >  BL_MEM_WRITE_PREPARE")
 
-        file_length = calc_file_len()
+        file_length = calc_file_len("Application.bin")
         remainder = file_length % 256
 
         if remainder != 0:
@@ -495,8 +492,8 @@ def decode_menu_command_code(command):
 
         data_buf[0] = COMMAND_BL_MEM_WRITE_PREPARE
         data_buf[1] = 0x08
-        data_buf[2] = 0x00
-        data_buf[3] = 0x80
+        data_buf[2] = 0x02
+        data_buf[3] = 0x00
         data_buf[4] = 0x00
 
         # Extract the Most Significant Byte (MSB) by shifting right 8 bits

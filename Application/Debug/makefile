@@ -98,7 +98,7 @@ clean:
 	-@echo ' '
 
 post-build:
-	arm-none-eabi-objcopy -O binary --pad-to=0x08010000 --gap-fill=0x00 "Application.elf" "Application.bin"
+	arm-none-eabi-objcopy -O binary --pad-to=0x08028000 --gap-fill=0x00 "Application.elf" "Application.bin"
 	-@echo ' '
 
 secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST) $(OBJCOPY_HEX) $(OBJCOPY_BIN)

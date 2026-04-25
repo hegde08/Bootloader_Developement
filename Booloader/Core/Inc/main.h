@@ -28,6 +28,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f3xx_hal.h"
+#include "secure_wrapper.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -49,8 +50,8 @@ extern "C" {
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
 
-#define APPLICATION_START_ADDRESS    0x08008000U
-#define APPLICATION_RESET_HANDLER_ADDRESS   0x08008004
+#define APPLICATION_START_ADDRESS    0x08020000U
+#define APPLICATION_RESET_HANDLER_ADDRESS   0x08020004U
 
 /* USER CODE END EM */
 
@@ -79,13 +80,13 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN Private defines */
 
+void printmsg(char *format,...);
 void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer);
 void bootloader_handle_flash_erase_cmd(uint8_t *pBuffer);
 void bootloader_handle_mem_write_cmd(uint8_t *pBuffer);
 void bootloder_handle_mem_write_prepare(uint8_t *pBuffer);
 void bootloader_uart_read_data(void);
 void bootloader_jump_to_user_app(void);
-void printmsg(char *format,...);
 void decode__erase_command(uint8_t* pBuffer, FLASH_EraseInitTypeDef* decoded_value);
 uint8_t get_bootloader_version(void);
 void bootloader_uart_response_data(uint8_t *pBuffer,uint32_t len);
@@ -119,6 +120,7 @@ void bootloader_uart_response_data(uint8_t *pBuffer,uint32_t len);
 #define BL_DEBUG_MSG_EN
 #define BL_MESSAGE_CHUNK_LENGTH  256U
 #define TOTAL_NO_WORDS   (256U/4U)
+
 
 #ifdef __cplusplus
 }

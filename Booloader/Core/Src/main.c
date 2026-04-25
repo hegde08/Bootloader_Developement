@@ -58,8 +58,10 @@ UART_HandleTypeDef huart3;
 uint8_t bl_rx_buffer[BL_RX_LEN];
 uint32_t FlashingStart = 0x00000000;
 uint16_t FlashingLength = 0;
+uint16_t curr_Falshed_length = 0;
 uint16_t total_no_of_frames;
 uint32_t currentAddress;
+uint8_t outputDigest[32] __attribute__((aligned(4)));
 
 /* USER CODE END PV */
 
@@ -110,6 +112,14 @@ int main(void)
   MX_CRC_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
+
+  if (cmox_initialize(NULL) != CMOX_INIT_SUCCESS)
+    {
+        printmsg("Crypto Init Failed! System Halted.\r\n");
+        Error_Handler();
+    }
+
+  init_ecc_system();
 
   /* USER CODE END 2 */
 
@@ -479,14 +489,13 @@ void bootloader_handle_mem_write_cmd(uint8_t *pBuffer)
 	uint8_t response_buffer[3];
 	HAL_StatusTypeDef returnStatus;
 	uint8_t flash_data_receive[256];
+	uint8_t signatureRec[64] __attribute__((aligned(4)));
 
 	HAL_FLASH_Unlock();
 	/* Receive the Frame Number */
 	HAL_UART_Receive(C_UART, &pBuffer[1], 1, HAL_MAX_DELAY);
-	if(pBuffer[1] < total_no_of_frames)
-	{
-		HAL_UART_Receive(C_UART, &flash_data_receive[0], BL_MESSAGE_CHUNK_LENGTH, HAL_MAX_DELAY);
-	}
+
+	HAL_UART_Receive(C_UART, &flash_data_receive[0], BL_MESSAGE_CHUNK_LENGTH, HAL_MAX_DELAY);
 
 	uint32_t *pData = (uint32_t *)&flash_data_receive[0];
 
@@ -506,10 +515,23 @@ void bootloader_handle_mem_write_cmd(uint8_t *pBuffer)
 
 	}
 	memset(flash_data_receive, 0, sizeof(flash_data_receive));
+
+	curr_Falshed_length += BL_MESSAGE_CHUNK_LENGTH;
 	response_buffer[0] = pBuffer[0];
 	response_buffer[1] = pBuffer[1];
 	bootloader_uart_response_data(&response_buffer[0], 3);
 	HAL_FLASH_Lock();
+
+
+	if(curr_Falshed_length == FlashingLength)
+	{
+		HAL_UART_Receive(C_UART, &signatureRec[0], SIGNATURE_SIZE, HAL_MAX_DELAY);
+
+		Calculate_Firmware_Hash(&outputDigest[0], APPLICATION_START_ADDRESS, (uint16_t)FlashingLength);
+
+		Calculate_Signature(&outputDigest[0], &signatureRec[0]);
+
+	}
 
 }
 
@@ -561,3 +583,5 @@ void bootloder_handle_mem_write_prepare(uint8_t *pBuffer)
 
 	bootloader_uart_response_data(&response_buffer[0], 2);
 }
+
+

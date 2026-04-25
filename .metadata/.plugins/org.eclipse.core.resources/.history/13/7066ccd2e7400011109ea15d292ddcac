@@ -1,0 +1,42 @@
+/*
+ * secure_wrapper.c
+ *
+ *  Created on: Apr 25, 2026
+ *      Author: hegde
+ */
+
+#ifndef SRC_SECURE_WRAPPER_C_
+#define SRC_SECURE_WRAPPER_C_
+
+#include "secure_wrapper.h"
+
+#endif /* SRC_SECURE_WRAPPER_C_ */
+
+#include "cmox_crypto.h"
+
+
+void Calculate_Firmware_Hash(uint8_t *output_digest, uint32_t startAddress, uint16_t size)
+{
+    cmox_hash_retval_t retval;
+    size_t generated_length = 0;
+
+    /* 1. Create a pointer that looks directly at the Flash memory */
+    const uint8_t *firmware_in_flash = (const uint8_t *)startAddress;
+
+    /* 2. Execute the Single-Shot API */
+    retval = cmox_hash_compute(
+        CMOX_SHA256_ALGO,          // The algorithm to use
+        firmware_in_flash,         // Pointer directly to Flash memory
+		size,    // 32,768 bytes
+        output_digest,             // The array where the 32-byte hash will be saved
+        32,                        // We expect a 32-byte digest for SHA-256
+        &generated_length          // ST requires this parameter to confirm length
+    );
+
+    /* 3. Check for success */
+    if (retval != CMOX_HASH_SUCCESS)
+    {
+        printmsg("ERROR: Hash computation failed!\r\n");
+        // Handle error (e.g., erase the first page)
+    }
+}

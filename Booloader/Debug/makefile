@@ -67,7 +67,7 @@ main-build: Booloader.elf secondary-outputs
 
 # Tool invocations
 Booloader.elf Booloader.map: $(OBJS) $(USER_OBJS) D:\Embedded\ Systems\Bootloader_Developement\Booloader\STM32F303RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "Booloader.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\Embedded Systems\Bootloader_Developement\Booloader\STM32F303RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Booloader.map" -Wl,--gc-sections -static -L"D:\Embedded Systems\Bootloader_Developement\Booloader\STM32_Cryptographic\lib" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+	arm-none-eabi-gcc -o "Booloader.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\Embedded Systems\Bootloader_Developement\Booloader\STM32F303RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Booloader.map" -Wl,--gc-sections -static -L"D:\Embedded Systems\Bootloader_Developement\Booloader\STM32_Cryptographic\lib" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
