@@ -18,11 +18,14 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
+
+#include "main.h"
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
 
@@ -33,6 +36,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+#define C_UART     &huart2
+#define D_UART     &huart3
 
 /* USER CODE END PD */
 
@@ -47,11 +53,13 @@ CRC_HandleTypeDef hcrc;
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
 
-#define C_UART     &huart2
-#define D_UART     &huart3
-#define BL_DEBUG_MSG_EN
-
 /* USER CODE BEGIN PV */
+
+uint8_t bl_rx_buffer[BL_RX_LEN];
+uint32_t FlashingStart = 0x00000000;
+uint16_t FlashingLength = 0;
+uint16_t total_no_of_frames;
+uint32_t currentAddress;
 
 /* USER CODE END PV */
 
@@ -101,6 +109,9 @@ int main(void)
   MX_USART2_UART_Init();
   MX_CRC_Init();
   MX_USART3_UART_Init();
+  /* USER CODE BEGIN 2 */
+
+  /* USER CODE END 2 */
 
   if(HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET)
   {
@@ -208,7 +219,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 38400;
+  huart2.Init.BaudRate = 115200;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -312,7 +323,7 @@ void printmsg(char *format,...)
 	va_list args;
 	va_start(args, format);
 	vsprintf(str, format, args);
-	HAL_UART_Transmit(C_UART, (uint8_t*)str, strlen(str), HAL_MAX_DELAY);
+	HAL_UART_Transmit(D_UART, (uint8_t*)str, strlen(str), HAL_MAX_DELAY);
 	va_end(args);
 #endif
 
@@ -320,6 +331,51 @@ void printmsg(char *format,...)
 
 void bootloader_uart_read_data(void)
 {
+
+	while(1)
+	{
+		memset(bl_rx_buffer, 0, 10);
+		/* Read only one byte from the UART, which will tell about how many bytes are there after*/
+		HAL_UART_Receive(C_UART, &bl_rx_buffer[0], 1, HAL_MAX_DELAY);
+
+		/* Switch to cases based on command*/
+		switch ( bl_rx_buffer[0] )
+		{
+		      case BL_GET_VER:
+		      {
+		          bootloader_handle_getver_cmd(bl_rx_buffer);
+		          break;
+		      }
+
+		      case BL_FLASH_ERASE:
+		      {
+		    	  HAL_UART_Receive(C_UART, &bl_rx_buffer[1], 5, HAL_MAX_DELAY);
+		          bootloader_handle_flash_erase_cmd(bl_rx_buffer);
+		          break;
+		      }
+
+		      case BL_MEM_WRITE_PREPARE:
+		      {
+		    	  HAL_UART_Receive(C_UART, &bl_rx_buffer[1], 5, HAL_MAX_DELAY);
+		    	  bootloder_handle_mem_write_prepare(bl_rx_buffer);
+		    	  break;
+		      }
+
+		      case BL_MEM_WRITE:
+		      {
+		          bootloader_handle_mem_write_cmd(bl_rx_buffer);
+		          break;
+		      }
+
+		      default:
+		      {
+		          printmsg("BL_DEBUG_MSG:Invalid command code received from host \n");
+		          break;
+		      }
+
+		}
+
+	}
 
 }
 
@@ -379,3 +435,129 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
+
+void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer)
+{
+	uint8_t bl_version;
+	uint8_t response_buffer[2];
+	printmsg("BL_DEBUG_MSG:bootloader_handle_getver_cmd\n");
+    bl_version=get_bootloader_version();
+    response_buffer[0] = BL_ACK;
+    response_buffer[1] = bl_version;
+    printmsg("BL_DEBUG_MSG:BL_VER : %d %#x\n",bl_version,bl_version);
+    bootloader_uart_response_data(&response_buffer[0], 2);
+}
+
+void bootloader_handle_flash_erase_cmd(uint8_t *pBuffer)
+{
+	FLASH_EraseInitTypeDef decoded_value;
+	uint32_t pageError;
+	uint8_t response_buffer[2];
+	HAL_StatusTypeDef Erase_Status;
+
+	decode__erase_command(pBuffer, &decoded_value);
+	HAL_FLASH_Unlock();
+	Erase_Status = HAL_FLASHEx_Erase(&decoded_value, &pageError);
+	HAL_FLASH_Lock();
+
+	if(Erase_Status == HAL_OK)
+	{
+		response_buffer[0] = pBuffer[0];
+		response_buffer[1] = Erase_Status;
+	}
+	else
+	{
+		response_buffer[0] = pBuffer[0];
+		response_buffer[1] = Erase_Status;
+	}
+
+	bootloader_uart_response_data(&response_buffer[0], 2);
+}
+
+void bootloader_handle_mem_write_cmd(uint8_t *pBuffer)
+{
+	uint8_t response_buffer[3];
+	HAL_StatusTypeDef returnStatus;
+	uint8_t flash_data_receive[256];
+
+	HAL_FLASH_Unlock();
+	/* Receive the Frame Number */
+	HAL_UART_Receive(C_UART, &pBuffer[1], 1, HAL_MAX_DELAY);
+	if(pBuffer[1] < total_no_of_frames)
+	{
+		HAL_UART_Receive(C_UART, &flash_data_receive[0], BL_MESSAGE_CHUNK_LENGTH, HAL_MAX_DELAY);
+	}
+
+	uint32_t *pData = (uint32_t *)&flash_data_receive[0];
+
+	for(int j = 0; j< TOTAL_NO_WORDS; j++)
+	{
+		returnStatus = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, currentAddress , pData[j] );
+		if(returnStatus == HAL_OK)
+		{
+			currentAddress += 4;
+			response_buffer[2] = returnStatus;
+		}
+		else
+		{
+			response_buffer[2] = returnStatus;
+			break;
+		}
+
+	}
+	memset(flash_data_receive, 0, sizeof(flash_data_receive));
+	response_buffer[0] = pBuffer[0];
+	response_buffer[1] = pBuffer[1];
+	bootloader_uart_response_data(&response_buffer[0], 3);
+	HAL_FLASH_Lock();
+
+}
+
+uint8_t get_bootloader_version(void)
+{
+	return BL_VERSION;
+}
+
+void bootloader_uart_response_data(uint8_t *pBuffer,uint32_t len)
+{
+	/*you can replace the below ST's USART driver API call with your MCUs driver API call */
+	HAL_UART_Transmit(C_UART,pBuffer,len,HAL_MAX_DELAY);
+}
+
+void decode__erase_command(uint8_t* pBuffer, FLASH_EraseInitTypeDef* decoded_value)
+{
+	uint32_t startingAddress = 0x00000000;
+	uint32_t no_of_page = 0;
+
+	startingAddress = (((uint32_t)pBuffer[1] << 24) |
+	                  ((uint32_t)pBuffer[2] << 16) |
+	                  ((uint32_t)pBuffer[3] << 8)  |
+	                  ((uint32_t)pBuffer[4]));
+
+	no_of_page = (uint32_t)pBuffer[5];
+
+	decoded_value->TypeErase = FLASH_TYPEERASE_PAGES;
+	decoded_value->PageAddress = startingAddress;
+	decoded_value->NbPages = no_of_page;
+}
+
+void bootloder_handle_mem_write_prepare(uint8_t *pBuffer)
+{
+	uint8_t response_buffer[2];
+	FlashingStart = (((uint32_t)pBuffer[1] << 24) |
+	                  ((uint32_t)pBuffer[2] << 16) |
+	                  ((uint32_t)pBuffer[3] << 8)  |
+	                  ((uint32_t)pBuffer[4]));
+
+	FlashingLength = (((uint32_t)pBuffer[5] << 8)  |
+            			((uint32_t)pBuffer[6]));
+
+	total_no_of_frames = FlashingLength/256;
+
+	currentAddress = FlashingStart;
+
+	response_buffer[0] = pBuffer[0];
+	response_buffer[1] = 0x00;
+
+	bootloader_uart_response_data(&response_buffer[0], 2);
+}

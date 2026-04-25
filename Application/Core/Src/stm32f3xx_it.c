@@ -202,7 +202,6 @@ void SysTick_Handler(void)
   * @brief This function handles EXTI line[15:10] interrupts.
   */
 uint8_t toggle_flag = GPIO_PIN_SET;
-
 void EXTI15_10_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI15_10_IRQn 0 */

@@ -1,33 +1,9 @@
-00:23:24 **** Incremental Build of configuration Debug for project Booloader ****
+21:20:45 **** Incremental Build of configuration Debug for project Application ****
 make -j16 all 
-arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F303xE -c -I../Core/Inc -I../Drivers/STM32F3xx_HAL_Driver/Inc -I../Drivers/STM32F3xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F3xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
-arm-none-eabi-gcc "../Core/Src/stm32f3xx_hal_msp.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F303xE -c -I../Core/Inc -I../Drivers/STM32F3xx_HAL_Driver/Inc -I../Drivers/STM32F3xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F3xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/stm32f3xx_hal_msp.d" -MT"Core/Src/stm32f3xx_hal_msp.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/stm32f3xx_hal_msp.o"
-arm-none-eabi-gcc "../Core/Src/stm32f3xx_it.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F303xE -c -I../Core/Inc -I../Drivers/STM32F3xx_HAL_Driver/Inc -I../Drivers/STM32F3xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F3xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/stm32f3xx_it.d" -MT"Core/Src/stm32f3xx_it.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/stm32f3xx_it.o"
-arm-none-eabi-gcc -o "Booloader.elf" @"objects.list"   -mcpu=cortex-m4 -T"D:\Embedded Systems\Bootloader_Developement\Booloader\STM32F303RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Booloader.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
-Finished building target: Booloader.elf
- 
-arm-none-eabi-size  Booloader.elf 
-arm-none-eabi-objdump -h -S Booloader.elf  > "Booloader.list"
-arm-none-eabi-objcopy  -O ihex Booloader.elf  "Booloader.hex"
+arm-none-eabi-size  Application.elf 
    text	   data	    bss	    dec	    hex	filename
-  15660	     92	   2212	  17964	   462c	Booloader.elf
+  14824	     96	   2040	  16960	   4240	Application.elf
 Finished building: default.size.stdout
  
-Finished building: Booloader.hex
-Finished building: Booloader.list
- 
- 
-00:23:31 **** Incremental Build of configuration Debug for project Booloader ****
-make -j16 all 
-arm-none-eabi-size  Booloader.elf 
-   text	   data	    bss	    dec	    hex	filename
-  15660	     92	   2212	  17964	   462c	Booloader.elf
-Finished building: default.size.stdout
- 
-00:24:45 **** Incremental Build of configuration Debug for project Booloader ****
-make -j16 all 
-arm-none-eabi-size  Booloader.elf 
-   text	   data	    bss	    dec	    hex	filename
-  15660	     92	   2212	  17964	   462c	Booloader.elf
-Finished building: default.size.stdout
+arm-none-eabi-objcopy -O binary --pad-to=0x08010000 --gap-fill=0x00 "Application.elf" "Application.bin"
  

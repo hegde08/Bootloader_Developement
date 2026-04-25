@@ -32,6 +32,8 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+
+
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -55,11 +57,6 @@ extern "C" {
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
-/* Bootlader Fucntion Prototypes----------------------------------------------*/
-void bootloader_uart_read_data(void);
-void bootloader_jump_to_user_app(void);
-void printmsg(char *format,...);
-
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */
@@ -82,7 +79,46 @@ void printmsg(char *format,...);
 
 /* USER CODE BEGIN Private defines */
 
-/* USER CODE END Private defines */
+void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer);
+void bootloader_handle_flash_erase_cmd(uint8_t *pBuffer);
+void bootloader_handle_mem_write_cmd(uint8_t *pBuffer);
+void bootloder_handle_mem_write_prepare(uint8_t *pBuffer);
+void bootloader_uart_read_data(void);
+void bootloader_jump_to_user_app(void);
+void printmsg(char *format,...);
+void decode__erase_command(uint8_t* pBuffer, FLASH_EraseInitTypeDef* decoded_value);
+uint8_t get_bootloader_version(void);
+void bootloader_uart_response_data(uint8_t *pBuffer,uint32_t len);
+
+
+
+
+//#define  <command name >  <command_code>
+
+//This command is used to read the bootloader version from the MCU
+#define BL_GET_VER        0x80
+
+//This command is used to mass erase or sector erase of the user flash .
+#define BL_FLASH_ERASE          0x81
+
+//This command is used to write data in to different memories of the MCU
+#define BL_MEM_WRITE_PREPARE      0x82
+
+#define BL_MEM_WRITE             0x83
+
+
+#define BL_VERSION 0x10
+
+#define BL_ACK    0x00
+
+
+#define BL_ERASE_SUCCESS   0x00
+#define BL_ERASE_FAILURE   0x01
+
+#define BL_RX_LEN  10U
+#define BL_DEBUG_MSG_EN
+#define BL_MESSAGE_CHUNK_LENGTH  256U
+#define TOTAL_NO_WORDS   (256U/4U)
 
 #ifdef __cplusplus
 }

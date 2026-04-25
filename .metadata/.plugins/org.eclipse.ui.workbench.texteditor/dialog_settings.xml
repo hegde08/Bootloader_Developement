@@ -3,6 +3,13 @@
 	<item key="hasShownOverlayPopupBefore" value="true"/>
 	<item key="replaceBarOpen" value="false"/>
 	<list key="searchhistory">
+		<item value="bootloder_handle_mem_write_prepare"/>
+		<item value="total_no_of_frames"/>
+		<item value="bootloader_handle_mem_write_cmd"/>
+		<item value="TypeProgram"/>
+		<item value="FLASH_Type_Program"/>
+		<item value="HAL_FLASH_Unlock"/>
+		<item value="mass"/>
 		<item value="VECT_TAB_OFFSET"/>
 	</list>
 </section>

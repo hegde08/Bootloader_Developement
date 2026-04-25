@@ -3,9 +3,10 @@ LaunchTargetManager/org.eclipse.launchbar.core.launchTargetType.local,Local/name
 LaunchTargetManager/org.eclipse.launchbar.core.launchTargetType.local,Local/os=win32
 configDescList=org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:Booloader Debug,org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:Application,org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:Booloader
 eclipse.preferences.version=1
-org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:Application/activeLaunchMode=debug
+org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:Application/activeLaunchMode=run
+org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:Application/activeLaunchTarget=null\:---
 org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:Booloader\ Debug/activeLaunchMode=run
 org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:Booloader\ Debug/activeLaunchTarget=null\:---
-org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:Booloader/activeLaunchMode=run
+org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:Booloader/activeLaunchMode=debug
 org.eclipse.launchbar.core.descriptorType.default\:Booloader\ Debug/activeLaunchMode=run
 org.eclipse.launchbar.core.descriptorType.default\:Booloader\ Debug/activeLaunchTarget=org.eclipse.launchbar.core.launchTargetType.local\:Local

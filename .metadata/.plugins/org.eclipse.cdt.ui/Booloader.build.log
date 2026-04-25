@@ -1,10 +1,10 @@
-00:24:45 **** Incremental Build of configuration Debug for project Booloader ****
+21:20:40 **** Incremental Build of configuration Debug for project Booloader ****
 make -j16 all 
 arm-none-eabi-size  Booloader.elf 
    text	   data	    bss	    dec	    hex	filename
-  15660	     92	   2212	  17964	   462c	Booloader.elf
+  18012	     92	   2264	  20368	   4f90	Booloader.elf
 Finished building: default.size.stdout
  
 
-00:24:45 Build Finished. 0 errors, 0 warnings. (took 201ms)
+21:20:40 Build Finished. 0 errors, 0 warnings. (took 216ms)
 
