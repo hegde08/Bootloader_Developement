@@ -14,15 +14,6 @@
 
 #include "cmox_crypto.h"
 
-uint8_t publicKey[64] __attribute__((aligned(4))) = {0xca,0xcb,0xdd,0xe7,0x8a,0xb3,0x8d,0x78,
-		0xa0,0x4e,0x98,0x74,0x71,0x4e,0xd2,0x11,
-		0x1c,0x6b,0x32,0x6e,0xb5,0xdf, 0x6f,0x2b,
-		0x2e,0xc4,0x3f,0x06,0x37,0xf4,0x4d,0x84,
-		0x41,0xca,0x87,0x92,0x5a,0xe9,0x97,0x50,
-		0xa8,0x14,0xe5,0x90,0x7c,0x92,0xce,0xf9,
-		0xa7,0xe8,0x26,0x1c,0x3d,0x59,0x87,0x4b,
-		0x12,0x66,0xd5,0x9b,0x41,0x20,0x49,0x10
-};
 
 // 1. Define the ECC handle and the math engine
 cmox_ecc_handle_t EccCtx;
@@ -42,7 +33,7 @@ void init_ecc_system(void) {
                         sizeof(WorkingArea));     // Buffer size
 }
 
-void Calculate_Firmware_Hash(uint8_t *output_digest, uint32_t startAddress, uint16_t size)
+Std_Security_Return_type Calculate_Firmware_Hash(uint8_t *output_digest, uint32_t startAddress, uint16_t size)
 {
     cmox_hash_retval_t retval;
     size_t generated_length = 0;
@@ -63,11 +54,15 @@ void Calculate_Firmware_Hash(uint8_t *output_digest, uint32_t startAddress, uint
     /* 3. Check for success */
     if (retval != CMOX_HASH_SUCCESS)
     {
-    	// Status Return
+    	return SEC_NOT_OK;
+    }
+    else
+    {
+    	return SEC_OK;
     }
 }
 
-void Calculate_Signature(uint8_t* outputDigest, uint8_t* signatureRec)
+Std_Security_Return_type Calculate_Signature(uint8_t* outputDigest, uint8_t* signatureRec)
 {
 	uint32_t fault_check = 0;
 	cmox_ecc_retval_t status;
@@ -75,7 +70,7 @@ void Calculate_Signature(uint8_t* outputDigest, uint8_t* signatureRec)
 	status = cmox_ecdsa_verify(
 	    &EccCtx,                        // Your initialized ECC handle
 	    CMOX_ECC_SECP256R1_HIGHMEM,     // Matches NIST256p
-	    publicKey,                      // Raw Public Key bytes
+		PUB_KEY_PTR,                      // Raw Public Key bytes
 	    64,                             // PubKey length (uncompressed is usually 64)
 	    outputDigest,                   // Your 32-byte hash
 	    32,                             // Digest length
@@ -85,9 +80,12 @@ void Calculate_Signature(uint8_t* outputDigest, uint8_t* signatureRec)
 	);
 
 	// Strict check as per the library @note
-	if ((status == CMOX_ECC_AUTH_SUCCESS) && (fault_check == CMOX_ECC_AUTH_SUCCESS)) {
-	    // Signature is valid
-	} else {
-	    // Verification failed or fault detected
+	if ((status == CMOX_ECC_AUTH_SUCCESS) && (fault_check == CMOX_ECC_AUTH_SUCCESS))
+	{
+	    return SEC_OK;
+	}
+	else
+	{
+	   return SEC_NOT_OK;
 	}
 }

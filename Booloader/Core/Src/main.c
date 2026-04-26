@@ -37,13 +37,26 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define C_UART     &huart2
-#define D_UART     &huart3
+
+
+struct logical_block_info logical_block = {
+		1,
+		{
+			{APPLICATION_IDENTIFIER, APPLICATION_START_ADDRESS, APPLCIATION_LENGTH},
+		}
+};
+
+uint32_t current_logical_block_start_address;
+static uint16_t current_logical_block_length = 0;
+
 
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+
+#define C_UART     &huart2
+#define D_UART     &huart3
 
 /* USER CODE END PM */
 
@@ -61,7 +74,6 @@ uint16_t FlashingLength = 0;
 uint16_t curr_Falshed_length = 0;
 uint16_t total_no_of_frames;
 uint32_t currentAddress;
-uint8_t outputDigest[32] __attribute__((aligned(4)));
 
 /* USER CODE END PV */
 
@@ -123,7 +135,7 @@ int main(void)
 
   /* USER CODE END 2 */
 
-  if(HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET)
+  if((HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET) || (signature_check_boot()==1))
   {
 	  printmsg("BL_DEBUG_MSG : Button is pressed, stay in Bootloader Mode\n\r");
 	  bootloader_uart_read_data();
@@ -359,16 +371,9 @@ void bootloader_uart_read_data(void)
 
 		      case BL_FLASH_ERASE:
 		      {
-		    	  HAL_UART_Receive(C_UART, &bl_rx_buffer[1], 5, HAL_MAX_DELAY);
+		    	  HAL_UART_Receive(C_UART, &bl_rx_buffer[1], 2, HAL_MAX_DELAY);
 		          bootloader_handle_flash_erase_cmd(bl_rx_buffer);
 		          break;
-		      }
-
-		      case BL_MEM_WRITE_PREPARE:
-		      {
-		    	  HAL_UART_Receive(C_UART, &bl_rx_buffer[1], 5, HAL_MAX_DELAY);
-		    	  bootloder_handle_mem_write_prepare(bl_rx_buffer);
-		    	  break;
 		      }
 
 		      case BL_MEM_WRITE:
@@ -452,7 +457,7 @@ void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer)
 	uint8_t response_buffer[2];
 	printmsg("BL_DEBUG_MSG:bootloader_handle_getver_cmd\n");
     bl_version=get_bootloader_version();
-    response_buffer[0] = BL_ACK;
+    response_buffer[0] = E_OK;
     response_buffer[1] = bl_version;
     printmsg("BL_DEBUG_MSG:BL_VER : %d %#x\n",bl_version,bl_version);
     bootloader_uart_response_data(&response_buffer[0], 2);
@@ -463,12 +468,17 @@ void bootloader_handle_flash_erase_cmd(uint8_t *pBuffer)
 	FLASH_EraseInitTypeDef decoded_value;
 	uint32_t pageError;
 	uint8_t response_buffer[2];
-	HAL_StatusTypeDef Erase_Status;
+	HAL_StatusTypeDef Erase_Status = HAL_ERROR;
+	Std_Return_Type status = E_NOT_OK;
 
-	decode__erase_command(pBuffer, &decoded_value);
-	HAL_FLASH_Unlock();
-	Erase_Status = HAL_FLASHEx_Erase(&decoded_value, &pageError);
-	HAL_FLASH_Lock();
+	status = decode__erase_command(pBuffer, &decoded_value);
+	if(status == E_OK)
+	{
+		HAL_FLASH_Unlock();
+		Erase_Status = HAL_FLASHEx_Erase(&decoded_value, &pageError);
+		Erase_Status = erase_signature_area();
+		HAL_FLASH_Lock();
+	}
 
 	if(Erase_Status == HAL_OK)
 	{
@@ -489,7 +499,6 @@ void bootloader_handle_mem_write_cmd(uint8_t *pBuffer)
 	uint8_t response_buffer[3];
 	HAL_StatusTypeDef returnStatus;
 	uint8_t flash_data_receive[256];
-	uint8_t signatureRec[64] __attribute__((aligned(4)));
 
 	HAL_FLASH_Unlock();
 	/* Receive the Frame Number */
@@ -523,14 +532,9 @@ void bootloader_handle_mem_write_cmd(uint8_t *pBuffer)
 	HAL_FLASH_Lock();
 
 
-	if(curr_Falshed_length == FlashingLength)
+	if(curr_Falshed_length == current_logical_block_length)
 	{
-		HAL_UART_Receive(C_UART, &signatureRec[0], SIGNATURE_SIZE, HAL_MAX_DELAY);
-
-		Calculate_Firmware_Hash(&outputDigest[0], APPLICATION_START_ADDRESS, (uint16_t)FlashingLength);
-
-		Calculate_Signature(&outputDigest[0], &signatureRec[0]);
-
+		bootloader_handle_mem_verify();
 	}
 
 }
@@ -546,42 +550,125 @@ void bootloader_uart_response_data(uint8_t *pBuffer,uint32_t len)
 	HAL_UART_Transmit(C_UART,pBuffer,len,HAL_MAX_DELAY);
 }
 
-void decode__erase_command(uint8_t* pBuffer, FLASH_EraseInitTypeDef* decoded_value)
+Std_Return_Type decode__erase_command(uint8_t* pBuffer, FLASH_EraseInitTypeDef* decoded_value)
 {
 	uint32_t startingAddress = 0x00000000;
 	uint32_t no_of_page = 0;
+	uint16_t identifier;
+	Std_Return_Type status = E_NOT_OK;
 
-	startingAddress = (((uint32_t)pBuffer[1] << 24) |
-	                  ((uint32_t)pBuffer[2] << 16) |
-	                  ((uint32_t)pBuffer[3] << 8)  |
-	                  ((uint32_t)pBuffer[4]));
+	identifier = (((uint32_t)pBuffer[1] << 8)  |
+                  ((uint32_t)pBuffer[2]));
 
-	no_of_page = (uint32_t)pBuffer[5];
 
-	decoded_value->TypeErase = FLASH_TYPEERASE_PAGES;
-	decoded_value->PageAddress = startingAddress;
-	decoded_value->NbPages = no_of_page;
+	for(int i=0;i<logical_block.no_of_blocks;i++)
+	{
+		if(identifier == logical_block.block_info[i].identifier)
+		{
+			current_logical_block_start_address = logical_block.block_info[i].start_address;
+			current_logical_block_length = logical_block.block_info[i].length;
+			currentAddress = current_logical_block_start_address;
+
+			decoded_value->TypeErase = FLASH_TYPEERASE_PAGES;
+			decoded_value->PageAddress = current_logical_block_start_address;
+			decoded_value->NbPages = (current_logical_block_length/2048);
+
+			status = E_OK;
+		}
+	}
+
+	return status;
 }
 
-void bootloder_handle_mem_write_prepare(uint8_t *pBuffer)
+void bootloader_handle_mem_verify()
 {
+	uint8_t signature_command;
+	uint8_t signatureRec[64] __attribute__((aligned(4)));
+	uint8_t outputDigest[32] __attribute__((aligned(4)));
+	Std_Security_Return_type returnStatus_Security;
 	uint8_t response_buffer[2];
-	FlashingStart = (((uint32_t)pBuffer[1] << 24) |
-	                  ((uint32_t)pBuffer[2] << 16) |
-	                  ((uint32_t)pBuffer[3] << 8)  |
-	                  ((uint32_t)pBuffer[4]));
 
-	FlashingLength = (((uint32_t)pBuffer[5] << 8)  |
-            			((uint32_t)pBuffer[6]));
+	HAL_UART_Receive(C_UART, &signature_command , SIGNATURE_VERIFICATION_CMD_SIZE , HAL_MAX_DELAY);
+	HAL_UART_Receive(C_UART, &signatureRec[0], SIGNATURE_SIZE, HAL_MAX_DELAY);
 
-	total_no_of_frames = FlashingLength/256;
+	response_buffer[0] = signature_command;
 
-	currentAddress = FlashingStart;
+	returnStatus_Security = Calculate_Firmware_Hash(&outputDigest[0], current_logical_block_start_address, (uint16_t)current_logical_block_length);
 
-	response_buffer[0] = pBuffer[0];
-	response_buffer[1] = 0x00;
+	if(returnStatus_Security == 0)
+	{
+		returnStatus_Security = Calculate_Signature(&outputDigest[0], &signatureRec[0]);
+		if(returnStatus_Security == 0)
+		{
+			returnStatus_Security = application_signature_write(&signatureRec[0]);
+		}
+		else
+		{
+
+		}
+	}
+	response_buffer[1] = returnStatus_Security;
 
 	bootloader_uart_response_data(&response_buffer[0], 2);
+
+	NVIC_SystemReset();
+
+}
+
+HAL_StatusTypeDef erase_signature_area()
+{
+	FLASH_EraseInitTypeDef signature_area;
+	uint32_t pageError;
+	HAL_StatusTypeDef Erase_Status;
+
+	signature_area.TypeErase = FLASH_TYPEERASE_PAGES;
+	signature_area.PageAddress = (uint32_t)SIGNATURE_STORAGE_AREA;
+	signature_area.NbPages = 1;
+
+	Erase_Status = HAL_FLASHEx_Erase(&signature_area, &pageError);
+	return Erase_Status;
+
+}
+
+Std_Security_Return_type application_signature_write(uint8_t* signature)
+{
+	uint8_t no_of_words = (SIGNATURE_SIZE/4U);
+	uint32_t* TempPtr = (uint32_t*)signature;
+	uint32_t storagePtr = (uint32_t)SIGNATURE_STORAGE_AREA;
+	HAL_StatusTypeDef returnStatus;
+
+	HAL_FLASH_Unlock();
+
+	for(int j = 0; j< no_of_words; j++)
+	{
+		returnStatus = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, storagePtr , TempPtr[j] );
+		if(returnStatus == HAL_OK)
+		{
+			storagePtr += 4;
+		}
+		else
+		{
+			return E_NOT_OK;
+		}
+	}
+
+	HAL_FLASH_Lock();
+
+	return E_OK;
+}
+
+Std_Security_Return_type signature_check_boot()
+{
+	uint8_t outputDigest[32] __attribute__((aligned(4)));
+	Std_Security_Return_type returnStatus_Security;
+
+	returnStatus_Security = Calculate_Firmware_Hash(&outputDigest[0], APPLICATION_START_ADDRESS, (uint16_t)APPLCIATION_LENGTH);
+
+	if(returnStatus_Security == 0)
+	{
+		returnStatus_Security = Calculate_Signature(&outputDigest[0], SIGNATURE_PTR);
+	}
+	return returnStatus_Security;
 }
 
 

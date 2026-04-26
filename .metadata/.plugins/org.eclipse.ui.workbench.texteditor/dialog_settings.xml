@@ -3,20 +3,20 @@
 	<item key="hasShownOverlayPopupBefore" value="true"/>
 	<item key="replaceBarOpen" value="false"/>
 	<list key="searchhistory">
-		<item value="stack"/>
+		<item value="APPLICATION_START_ADDRESS"/>
+		<item value="current_logical_block_length"/>
 		<item value="FlashingLength"/>
+		<item value="FlashingStart"/>
 		<item value="total_no_of_frames"/>
+		<item value="currentAddress"/>
+		<item value="BL_ACK"/>
+		<item value="decode__erase_command"/>
+		<item value="stack"/>
 		<item value="CRC_CLk"/>
 		<item value="CRC_CLOCK"/>
 		<item value="reset"/>
 		<item value="HAL_CRC_MODULE_ENABLED"/>
 		<item value="__SIZE_TYPE__"/>
 		<item value="BL_DEBUG_MSG_EN"/>
-		<item value="bl_rx_buffer"/>
-		<item value="currentAddress"/>
-		<item value="rem_no_of_bytes"/>
-		<item value="bootloder_handle_mem_write_prepare"/>
-		<item value="bootloader_handle_mem_write_cmd"/>
-		<item value="TypeProgram"/>
 	</list>
 </section>

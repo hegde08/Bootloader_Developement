@@ -34,7 +34,6 @@ extern "C" {
 /* USER CODE BEGIN Includes */
 
 
-
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -50,8 +49,13 @@ extern "C" {
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
 
+#define APPLICATION_IDENTIFIER       0x0808
 #define APPLICATION_START_ADDRESS    0x08020000U
+#define APPLCIATION_LENGTH           (32U*1024U)
 #define APPLICATION_RESET_HANDLER_ADDRESS   0x08020004U
+#define NO_OF_LOGICAL_BLOCK                1U
+
+typedef uint8_t  Std_Return_Type ;
 
 /* USER CODE END EM */
 
@@ -84,12 +88,15 @@ void printmsg(char *format,...);
 void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer);
 void bootloader_handle_flash_erase_cmd(uint8_t *pBuffer);
 void bootloader_handle_mem_write_cmd(uint8_t *pBuffer);
-void bootloder_handle_mem_write_prepare(uint8_t *pBuffer);
+void bootloader_handle_mem_verify(void);
 void bootloader_uart_read_data(void);
 void bootloader_jump_to_user_app(void);
-void decode__erase_command(uint8_t* pBuffer, FLASH_EraseInitTypeDef* decoded_value);
+Std_Return_Type decode__erase_command(uint8_t* pBuffer, FLASH_EraseInitTypeDef* decoded_value);
 uint8_t get_bootloader_version(void);
 void bootloader_uart_response_data(uint8_t *pBuffer,uint32_t len);
+HAL_StatusTypeDef erase_signature_area(void);
+Std_Security_Return_type application_signature_write(uint8_t* signature);
+Std_Security_Return_type signature_check_boot();
 
 
 
@@ -110,7 +117,8 @@ void bootloader_uart_response_data(uint8_t *pBuffer,uint32_t len);
 
 #define BL_VERSION 0x10
 
-#define BL_ACK    0x00
+#define E_OK    0x00
+#define E_NOT_OK  0x01
 
 
 #define BL_ERASE_SUCCESS   0x00
@@ -120,6 +128,21 @@ void bootloader_uart_response_data(uint8_t *pBuffer,uint32_t len);
 #define BL_DEBUG_MSG_EN
 #define BL_MESSAGE_CHUNK_LENGTH  256U
 #define TOTAL_NO_WORDS   (256U/4U)
+
+struct logical_block_def
+{
+	uint16_t identifier;
+	uint32_t start_address;
+	uint16_t length;
+};
+
+struct logical_block_info
+{
+	uint8_t no_of_blocks;
+	struct logical_block_def block_info[NO_OF_LOGICAL_BLOCK];
+};
+
+
 
 
 #ifdef __cplusplus

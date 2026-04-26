@@ -1,0 +1,22 @@
+/*
+ * secure_wrapper.h
+ *
+ *  Created on: Apr 26, 2026
+ *      Author: hegde
+ */
+
+#ifndef INC_SECURE_WRAPPER_H_
+#define INC_SECURE_WRAPPER_H_
+
+#include "cmox_crypto.h"
+
+#endif /* INC_SECURE_WRAPPER_H_ */
+
+
+#define SIGNATURE_SIZE  64U
+
+void init_ecc_system(void);
+void Calculate_Firmware_Hash(uint8_t *output_digest, uint32_t startAddress, uint16_t size);
+void Calculate_Signature(uint8_t* outputDigest, uint8_t* signatureRec);
+
+
