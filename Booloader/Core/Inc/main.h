@@ -97,6 +97,7 @@ void bootloader_uart_response_data(uint8_t *pBuffer,uint32_t len);
 HAL_StatusTypeDef erase_signature_area(void);
 Std_Security_Return_type application_signature_write(uint8_t* signature);
 Std_Security_Return_type signature_check_boot();
+void Enable_Protection_Page20_21(void);
 
 
 
@@ -113,6 +114,7 @@ Std_Security_Return_type signature_check_boot();
 #define BL_MEM_WRITE_PREPARE      0x82
 
 #define BL_MEM_WRITE             0x83
+
 
 
 #define BL_VERSION 0x10

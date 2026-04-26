@@ -20,10 +20,10 @@
 #define SEC_OK                                  0U
 #define SEC_NOT_OK		                        1U
 
-#define PUBLIC_KEY_ADDR   0x0807F800
+#define PUBLIC_KEY_ADDR   0x800A800
 #define PUB_KEY_PTR        ((const uint8_t*)(PUBLIC_KEY_ADDR))
 
-#define SIGNATURE_STORAGE_AREA   0x0807F000
+#define SIGNATURE_STORAGE_AREA   0x800B000
 #define SIGNATURE_PTR       ((uint8_t*)(SIGNATURE_STORAGE_AREA))
 
 typedef uint8_t  Std_Security_Return_type;

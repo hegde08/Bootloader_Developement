@@ -3,6 +3,7 @@
 	<item key="hasShownOverlayPopupBefore" value="true"/>
 	<item key="replaceBarOpen" value="false"/>
 	<list key="searchhistory">
+		<item value="FLASHEx_OB_Write_Protection"/>
 		<item value="APPLICATION_START_ADDRESS"/>
 		<item value="current_logical_block_length"/>
 		<item value="FlashingLength"/>
@@ -17,6 +18,5 @@
 		<item value="reset"/>
 		<item value="HAL_CRC_MODULE_ENABLED"/>
 		<item value="__SIZE_TYPE__"/>
-		<item value="BL_DEBUG_MSG_EN"/>
 	</list>
 </section>

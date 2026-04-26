@@ -139,6 +139,7 @@ int main(void)
   {
 	  printmsg("BL_DEBUG_MSG : Button is pressed, stay in Bootloader Mode\n\r");
 	  bootloader_uart_read_data();
+//	  Enable_Protection_Page20_21();
   }
   else
   {
@@ -552,8 +553,6 @@ void bootloader_uart_response_data(uint8_t *pBuffer,uint32_t len)
 
 Std_Return_Type decode__erase_command(uint8_t* pBuffer, FLASH_EraseInitTypeDef* decoded_value)
 {
-	uint32_t startingAddress = 0x00000000;
-	uint32_t no_of_page = 0;
 	uint16_t identifier;
 	Std_Return_Type status = E_NOT_OK;
 
@@ -601,17 +600,22 @@ void bootloader_handle_mem_verify()
 		if(returnStatus_Security == 0)
 		{
 			returnStatus_Security = application_signature_write(&signatureRec[0]);
+
+			response_buffer[1] = returnStatus_Security;
+
+			bootloader_uart_response_data(&response_buffer[0], 2);
+
+			bootloader_jump_to_user_app();
 		}
 		else
 		{
+			response_buffer[1] = returnStatus_Security;
 
+			bootloader_uart_response_data(&response_buffer[0], 2);
+
+			NVIC_SystemReset();
 		}
 	}
-	response_buffer[1] = returnStatus_Security;
-
-	bootloader_uart_response_data(&response_buffer[0], 2);
-
-	NVIC_SystemReset();
 
 }
 
@@ -669,6 +673,35 @@ Std_Security_Return_type signature_check_boot()
 		returnStatus_Security = Calculate_Signature(&outputDigest[0], SIGNATURE_PTR);
 	}
 	return returnStatus_Security;
+}
+
+void Enable_Protection_Page20_21(void)
+{
+    FLASH_OBProgramInitTypeDef OBConfig;
+
+    // 1. Unlock Flash and Option Bytes
+    HAL_FLASH_Unlock();
+    HAL_FLASH_OB_Unlock();
+
+    // 2. Clear and Configure the structure
+    // Using the macro found in your main.h / stm32f3xx_hal_flash_ex.h
+    OBConfig.OptionType = OPTIONBYTE_WRP;
+    OBConfig.WRPState   = OB_WRPSTATE_ENABLE;
+    OBConfig.WRPPage    = OB_WRP_PAGES20TO21; // Bit 0x00000400U
+
+    // 3. Program the Option Bytes
+    if (HAL_FLASHEx_OBProgram(&OBConfig) != HAL_OK) {
+        // Error handling here
+        Error_Handler();
+    }
+
+    // 4. Launch the changes.
+    // WARNING: This will cause an immediate System Reset.
+    HAL_FLASH_OB_Launch();
+
+    /* The code below this line will never be reached because of the reset */
+    HAL_FLASH_OB_Lock();
+    HAL_FLASH_Lock();
 }
 
 
