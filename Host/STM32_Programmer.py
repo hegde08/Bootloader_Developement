@@ -209,7 +209,7 @@ def decode_menu_command_code(command):
         print("\n   t_len_of_file :{0}\n".format(t_len_of_file))
 
         #keep opening the file
-        open_the_file("Application.sig")
+        open_the_file("Application_Invalid.sig")
 
         data_buf[0] = COMMNAD_BL_MEM_VERIFY
 
@@ -258,7 +258,10 @@ def read_bootloader_reply(command_code):
     elif((command_code) == COMMNAD_BL_MEM_VERIFY):
         ack=read_serial_port(2) 
         value=bytearray(ack)
-        print("\n   Continue with write command : ",hex(value[1]))
+        if((hex(value[1])) == "0x00"):
+            print("\n   Verification Successful, Control will be given to Application : ",hex(value[1]))
+        else:
+            print("\n   Verification Failure, Control will Stay in Bootloader: ",hex(value[1]))
 
     ret = 0
         

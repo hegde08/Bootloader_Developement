@@ -1,0 +1,43 @@
+/*
+ * bl_function.h
+ *
+ *  Created on: Apr 28, 2026
+ *      Author: hegde
+ */
+
+#ifndef INC_BL_FUNCTION_H_
+#define INC_BL_FUNCTION_H_
+
+
+
+#endif /* INC_BL_FUNCTION_H_ */
+
+/* Typdef Defines */
+typedef uint8_t  Std_Return_Type ;
+
+
+/* Macro Definitions */
+#define APPLICATION_IDENTIFIER       0x0808
+#define APPLICATION_START_ADDRESS    0x08020000U
+#define APPLCIATION_LENGTH           (32U*1024U)
+#define APPLICATION_RESET_HANDLER_ADDRESS   0x08020004U
+#define NO_OF_LOGICAL_BLOCK                1U
+
+
+
+/* Custom Function declarations */
+
+void printmsg(char *format,...);
+void bootloader_handle_getver_cmd();
+void bootloader_handle_flash_erase_cmd(uint8_t *pBuffer);
+void bootloader_handle_mem_write_cmd(uint8_t *pBuffer);
+void bootloader_handle_mem_verify(void);
+void bootloader_uart_read_data(void);
+void bootloader_jump_to_user_app(void);
+Std_Return_Type decode__erase_command(uint8_t* pBuffer, FLASH_EraseInitTypeDef* decoded_value);
+uint8_t get_bootloader_version(void);
+void bootloader_uart_response_data(uint8_t *pBuffer,uint32_t len);
+HAL_StatusTypeDef erase_signature_area(void);
+Std_Security_Return_type application_signature_write(uint8_t* signature);
+Std_Security_Return_type signature_check_boot();
+void Enable_Protection_Page20_21(void);

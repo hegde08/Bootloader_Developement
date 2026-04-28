@@ -1,0 +1,110 @@
+/* USER CODE BEGIN Header */
+/**
+  ******************************************************************************
+  * @file           : main.h
+  * @brief          : Header for main.c file.
+  *                   This file contains the common defines of the application.
+  ******************************************************************************
+  * @attention
+  *
+  * Copyright (c) 2026 STMicroelectronics.
+  * All rights reserved.
+  *
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
+  *
+  ******************************************************************************
+  */
+/* USER CODE END Header */
+
+/* Define to prevent recursive inclusion -------------------------------------*/
+#ifndef __MAIN_H
+#define __MAIN_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Includes ------------------------------------------------------------------*/
+#include "stm32f3xx_hal.h"
+#include "secure_wrapper.h"
+#include "bl_function.h"
+
+
+/* Exported functions prototypes ---------------------------------------------*/
+void Error_Handler(void);
+
+
+/* Private defines -----------------------------------------------------------*/
+#define B1_Pin GPIO_PIN_13
+#define B1_GPIO_Port GPIOC
+#define USART_TX_Pin GPIO_PIN_2
+#define USART_TX_GPIO_Port GPIOA
+#define USART_RX_Pin GPIO_PIN_3
+#define USART_RX_GPIO_Port GPIOA
+#define LD2_Pin GPIO_PIN_5
+#define LD2_GPIO_Port GPIOA
+#define TMS_Pin GPIO_PIN_13
+#define TMS_GPIO_Port GPIOA
+#define TCK_Pin GPIO_PIN_14
+#define TCK_GPIO_Port GPIOA
+#define SWO_Pin GPIO_PIN_3
+#define SWO_GPIO_Port GPIOB
+
+/* USER CODE BEGIN Private defines */
+
+
+
+
+
+//#define  <command name >  <command_code>
+
+//This command is used to read the bootloader version from the MCU
+#define BL_GET_VER        0x80
+
+//This command is used to mass erase or sector erase of the user flash .
+#define BL_FLASH_ERASE          0x81
+
+//This command is used to write data in to different memories of the MCU
+#define BL_MEM_WRITE_PREPARE      0x82
+
+#define BL_MEM_WRITE             0x83
+
+
+
+#define BL_VERSION 0x10
+
+#define E_OK    0x00
+#define E_NOT_OK  0x01
+
+
+#define BL_ERASE_SUCCESS   0x00
+#define BL_ERASE_FAILURE   0x01
+
+#define RX_BUFFER_LEN  10U
+#define BL_DEBUG_MSG_EN
+#define BL_MESSAGE_CHUNK_LENGTH  256U
+#define TOTAL_NO_WORDS   (256U/4U)
+
+struct logical_block_def
+{
+	uint16_t identifier;
+	uint32_t start_address;
+	uint16_t length;
+};
+
+struct logical_block_info
+{
+	uint8_t no_of_blocks;
+	struct logical_block_def block_info[NO_OF_LOGICAL_BLOCK];
+};
+
+
+
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __MAIN_H */

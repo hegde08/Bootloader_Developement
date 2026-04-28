@@ -1,10 +1,27 @@
-23:21:32 **** Incremental Build of configuration Debug for project Booloader ****
+23:20:12 **** Incremental Build of configuration Debug for project Booloader ****
 make -j16 all 
+arm-none-eabi-gcc "../Core/Src/bl_function.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F303xE -c -I../Core/Inc -I../Drivers/STM32F3xx_HAL_Driver/Inc -I../Drivers/STM32F3xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F3xx/Include -I../Drivers/CMSIS/Include -I../STM32_Cryptographic/include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/bl_function.d" -MT"Core/Src/bl_function.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=soft -mthumb -o "Core/Src/bl_function.o"
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F303xE -c -I../Core/Inc -I../Drivers/STM32F3xx_HAL_Driver/Inc -I../Drivers/STM32F3xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F3xx/Include -I../Drivers/CMSIS/Include -I../STM32_Cryptographic/include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=soft -mthumb -o "Core/Src/main.o"
+arm-none-eabi-gcc "../Core/Src/secure_wrapper.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F303xE -c -I../Core/Inc -I../Drivers/STM32F3xx_HAL_Driver/Inc -I../Drivers/STM32F3xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F3xx/Include -I../Drivers/CMSIS/Include -I../STM32_Cryptographic/include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/secure_wrapper.d" -MT"Core/Src/secure_wrapper.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=soft -mthumb -o "Core/Src/secure_wrapper.o"
+arm-none-eabi-gcc "../Core/Src/stm32f3xx_hal_msp.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F303xE -c -I../Core/Inc -I../Drivers/STM32F3xx_HAL_Driver/Inc -I../Drivers/STM32F3xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F3xx/Include -I../Drivers/CMSIS/Include -I../STM32_Cryptographic/include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/stm32f3xx_hal_msp.d" -MT"Core/Src/stm32f3xx_hal_msp.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=soft -mthumb -o "Core/Src/stm32f3xx_hal_msp.o"
+arm-none-eabi-gcc "../Core/Src/stm32f3xx_it.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F303xE -c -I../Core/Inc -I../Drivers/STM32F3xx_HAL_Driver/Inc -I../Drivers/STM32F3xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F3xx/Include -I../Drivers/CMSIS/Include -I../STM32_Cryptographic/include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/stm32f3xx_it.d" -MT"Core/Src/stm32f3xx_it.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=soft -mthumb -o "Core/Src/stm32f3xx_it.o"
+arm-none-eabi-gcc -o "Booloader.elf" @"objects.list"  -lSTM32Cryptographic_CM4 -mcpu=cortex-m4 -T"D:\Embedded Systems\Bootloader_Developement\Booloader\STM32F303RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Booloader.map" -Wl,--gc-sections -static -L"D:\Embedded Systems\Bootloader_Developement\Booloader\STM32_Cryptographic\lib" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: Booloader.elf
+ 
 arm-none-eabi-size  Booloader.elf 
+arm-none-eabi-objdump -h -S Booloader.elf  > "Booloader.list"
    text	   data	    bss	    dec	    hex	filename
-  39560	    108	   7416	  47084	   b7ec	Booloader.elf
+  39524	    108	   7416	  47048	   b7c8	Booloader.elf
+arm-none-eabi-objcopy  -O ihex Booloader.elf  "Booloader.hex"
 Finished building: default.size.stdout
  
+Finished building: Booloader.list
+Finished building: Booloader.hex
+ 
+arm-none-eabi-objcopy  -O binary Booloader.elf  "Booloader.bin"
+ 
+Finished building: Booloader.bin
+ 
 
-23:21:32 Build Finished. 0 errors, 0 warnings. (took 284ms)
+23:20:13 Build Finished. 0 errors, 0 warnings. (took 1s.651ms)
 

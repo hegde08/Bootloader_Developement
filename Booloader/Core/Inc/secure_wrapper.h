@@ -12,6 +12,7 @@
 
 #endif /* INC_SECURE_WRAPPER_H_ */
 
+/* Macro Definitions*/
 
 #define SIGNATURE_SIZE                          64U
 #define PUBLIC_KEY_SIZE                         64U
@@ -26,7 +27,12 @@
 #define SIGNATURE_STORAGE_AREA   0x800B000
 #define SIGNATURE_PTR       ((uint8_t*)(SIGNATURE_STORAGE_AREA))
 
+
+/* Typedef Definitions*/
+
 typedef uint8_t  Std_Security_Return_type;
+
+/* Function Declarations*/
 
 void init_ecc_system(void);
 Std_Security_Return_type Calculate_Firmware_Hash(uint8_t *output_digest, uint32_t startAddress, uint16_t size);

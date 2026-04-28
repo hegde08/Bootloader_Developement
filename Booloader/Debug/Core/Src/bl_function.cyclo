@@ -1,0 +1,15 @@
+../Drivers/CMSIS/Include/core_cm4.h:1939:34:__NVIC_SystemReset	1
+../Core/Src/bl_function.c:49:6:bootloader_uart_read_data	5
+../Core/Src/bl_function.c:99:6:bootloader_jump_to_user_app	1
+../Core/Src/bl_function.c:126:6:bootloader_handle_getver_cmd	1
+../Core/Src/bl_function.c:152:6:bootloader_handle_flash_erase_cmd	3
+../Core/Src/bl_function.c:198:6:bootloader_handle_mem_write_cmd	4
+../Core/Src/bl_function.c:262:9:get_bootloader_version	1
+../Core/Src/bl_function.c:274:6:bootloader_uart_response_data	1
+../Core/Src/bl_function.c:287:17:decode__erase_command	3
+../Core/Src/bl_function.c:326:6:bootloader_handle_mem_verify	2
+../Core/Src/bl_function.c:387:19:erase_signature_area	1
+../Core/Src/bl_function.c:410:26:application_signature_write	3
+../Core/Src/bl_function.c:447:26:signature_check_boot	2
+../Core/Src/bl_function.c:468:6:Enable_Protection_Page20_21	2
+../Core/Src/bl_function.c:499:6:printmsg	1

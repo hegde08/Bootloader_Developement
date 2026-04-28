@@ -1,0 +1,469 @@
+/*
+ * bl_function.c
+ *
+ *  Created on: Apr 28, 2026
+ *      Author: hegde
+ */
+
+
+#include "bl_function.h"
+#include <stdarg.h>
+#include <string.h>
+#include <stdio.h>
+
+/* MACRO definitions */
+
+/* Uart handler alias */
+#define C_UART     &huart2
+#define D_UART     &huart3
+
+
+/* Logical Block Info */
+struct logical_block_info logical_block = {
+		1,
+		{
+			{APPLICATION_IDENTIFIER, APPLICATION_START_ADDRESS, APPLCIATION_LENGTH},
+		}
+};
+
+/* Current flashing logical block Info */
+uint32_t current_logical_block_start_address;
+static uint16_t current_logical_block_length = 0;
+uint16_t curr_Falshed_length = 0;
+uint32_t currentAddress;
+
+/* UART Rx buffer for receiving Command for BL Operation*/
+uint8_t uart_rx[RX_BUFFER_LEN];
+
+/* UART Handler*/
+extern UART_HandleTypeDef huart2;
+extern UART_HandleTypeDef huart3;
+
+/* Function Definitions */
+
+
+/**
+  * @brief Read UART Command and switch to particular case based on command
+  * @retval None
+  */
+void bootloader_uart_read_data(void)
+{
+
+	while(1)
+	{
+		memset(uart_rx, 0, 10);
+		/* Read only one byte from the UART, which will tell about how many bytes are there after*/
+		HAL_UART_Receive(C_UART, &uart_rx[0], 1, HAL_MAX_DELAY);
+
+		/* Switch to cases based on command*/
+		switch ( uart_rx[0] )
+		{
+			  /* Get version Command 0x80 */
+		      case BL_GET_VER:
+		      {
+		          bootloader_handle_getver_cmd();
+		          break;
+		      }
+
+		      /* Flash Erase Command 0x81 */
+		      case BL_FLASH_ERASE:
+		      {
+		    	  HAL_UART_Receive(C_UART, &uart_rx[1], 2, HAL_MAX_DELAY);
+		          bootloader_handle_flash_erase_cmd(uart_rx);
+		          break;
+		      }
+
+		      /*Flash Write Command 0x81 */
+		      case BL_MEM_WRITE:
+		      {
+		          bootloader_handle_mem_write_cmd(uart_rx);
+		          break;
+		      }
+
+		      default:
+		      {
+		          printmsg("Invalid Command recieved from Flashing tool \n");
+		          break;
+		      }
+
+		}
+
+	}
+
+}
+
+/**
+  * @brief Jump to application logic
+  * @retval None
+  */
+void bootloader_jump_to_user_app(void)
+{
+	/* Create a function pointer to hold the reset handler*/
+	void(*app_reset_handler)(void);
+
+	printmsg("DBG_MSG : Running jump to application function\r\n");
+
+	/* Configure the MSP */
+	uint32_t msp_value = *((volatile uint32_t*)APPLICATION_START_ADDRESS);
+
+	__set_MSP(msp_value);
+
+	/* Fetch the reset handler and store that in Function pointer, Reset handler present at Flash start address + 4 */
+	uint32_t reset_handler_address = *((volatile uint32_t*)APPLICATION_RESET_HANDLER_ADDRESS);
+
+	app_reset_handler = (void*)reset_handler_address;
+
+	__disable_irq();
+	/* Jump to reset handler of Application*/
+	app_reset_handler();
+
+}
+
+/**
+  * @brief Bootloader version handler
+  * @retval None
+  */
+void bootloader_handle_getver_cmd()
+{
+	uint8_t bl_version;
+	uint8_t response_buffer[2];
+
+	printmsg("In Bootloader get version info\n");
+
+	/* Call Bootlder version handler*/
+    bl_version = get_bootloader_version();
+
+    /* UART Response Buffer Prepearation*/
+    response_buffer[0] = E_OK;
+    response_buffer[1] = bl_version;
+
+    printmsg("Bootloader Version = %d ",bl_version);
+
+    /* Call Uart response data to send the response to flashing tool*/
+    bootloader_uart_response_data(&response_buffer[0], 2);
+}
+
+
+/**
+  * @brief Erase logic Handler
+  * param[in] pBuffer  Pointer to UART Rx buffer
+  * @retval None
+  */
+void bootloader_handle_flash_erase_cmd(uint8_t *pBuffer)
+{
+	FLASH_EraseInitTypeDef decoded_value;
+	uint32_t pageError;
+	uint8_t response_buffer[2];
+	HAL_StatusTypeDef Erase_Status = HAL_ERROR;
+	Std_Return_Type status = E_NOT_OK;
+
+	/* Function decode the erase command sent by tester*/
+	status = decode__erase_command(pBuffer, &decoded_value);
+
+	if(status == E_OK)
+	{
+		/*
+		 * 1. Unlock Flash using driver API
+		 * 2. Call HAL_FLASHEx_Erase() API to erase the Page
+		 * 3. Erase the previous signature when Application erase is called
+		 * 4. Lock the flash using driver API*/
+		HAL_FLASH_Unlock();
+		Erase_Status = HAL_FLASHEx_Erase(&decoded_value, &pageError);
+		Erase_Status = erase_signature_area();
+		HAL_FLASH_Lock();
+	}
+
+	if(Erase_Status == HAL_OK)
+	{
+		response_buffer[0] = pBuffer[0];
+		response_buffer[1] = Erase_Status;
+	}
+	else
+	{
+		response_buffer[0] = pBuffer[0];
+		response_buffer[1] = Erase_Status;
+	}
+
+	bootloader_uart_response_data(&response_buffer[0], 2);
+}
+
+
+/**
+  * @brief Flash write logic
+  * param[in] pBuffer  Pointer to UART Rx buffer
+  * @retval None
+  */
+void bootloader_handle_mem_write_cmd(uint8_t *pBuffer)
+{
+	uint8_t response_buffer[3];
+	HAL_StatusTypeDef returnStatus;
+	uint8_t flash_data_receive[256];
+
+	HAL_FLASH_Unlock();
+	/* Receive the Frame Number */
+	HAL_UART_Receive(C_UART, &pBuffer[1], 1, HAL_MAX_DELAY);
+
+	HAL_UART_Receive(C_UART, &flash_data_receive[0], BL_MESSAGE_CHUNK_LENGTH, HAL_MAX_DELAY);
+
+	uint32_t *pData = (uint32_t *)&flash_data_receive[0];
+
+	for(int j = 0; j< TOTAL_NO_WORDS; j++)
+	{
+		returnStatus = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, currentAddress , pData[j] );
+		if(returnStatus == HAL_OK)
+		{
+			currentAddress += 4;
+			response_buffer[2] = returnStatus;
+		}
+		else
+		{
+			response_buffer[2] = returnStatus;
+			break;
+		}
+
+	}
+	memset(flash_data_receive, 0, sizeof(flash_data_receive));
+
+	curr_Falshed_length += BL_MESSAGE_CHUNK_LENGTH;
+	response_buffer[0] = pBuffer[0];
+	response_buffer[1] = pBuffer[1];
+	bootloader_uart_response_data(&response_buffer[0], 3);
+	HAL_FLASH_Lock();
+
+
+	if(curr_Falshed_length == current_logical_block_length)
+	{
+		bootloader_handle_mem_verify();
+	}
+
+}
+
+
+/**
+  * @brief Jump to application logic
+  * @retval uint8_t   Bootloder version
+  */
+uint8_t get_bootloader_version(void)
+{
+	return BL_VERSION;
+}
+
+
+/**
+  * @brief Uart response to flashing tool handler
+  * param[in] pBuffer  Pointer to Uart Rx buffer
+  * param[in] len length of uart response data
+  * @retval None
+  */
+void bootloader_uart_response_data(uint8_t *pBuffer,uint32_t len)
+{
+	/*you can replace the below ST's USART driver API call with your MCUs driver API call */
+	HAL_UART_Transmit(C_UART,pBuffer,len,HAL_MAX_DELAY);
+}
+
+
+/**
+  * @brief decode erase command coming from flashing tool and prepare structure of values for driver level flash api
+  * param[in]   pBuffer           Pointer to UART Rx buffer
+  * param[out]  decoded_value     structure data needed for driver erase command
+  * @retval None
+  */
+Std_Return_Type decode__erase_command(uint8_t* pBuffer, FLASH_EraseInitTypeDef* decoded_value)
+{
+	uint16_t identifier;
+	Std_Return_Type status = E_NOT_OK;
+
+	identifier = (((uint32_t)pBuffer[1] << 8)  |
+                  ((uint32_t)pBuffer[2]));
+
+
+	for(int i=0;i<logical_block.no_of_blocks;i++)
+	{
+		if(identifier == logical_block.block_info[i].identifier)
+		{
+			current_logical_block_start_address = logical_block.block_info[i].start_address;
+			current_logical_block_length = logical_block.block_info[i].length;
+			currentAddress = current_logical_block_start_address;
+
+			decoded_value->TypeErase = FLASH_TYPEERASE_PAGES;
+			decoded_value->PageAddress = current_logical_block_start_address;
+			decoded_value->NbPages = (current_logical_block_length/2048);
+
+			status = E_OK;
+		}
+	}
+
+	return status;
+}
+
+
+/**
+  * @brief Verification function
+  * @retval None
+  */
+void bootloader_handle_mem_verify()
+{
+	uint8_t signature_command;
+	uint8_t signatureRec[64] __attribute__((aligned(4)));
+	uint8_t outputDigest[32] __attribute__((aligned(4)));
+	Std_Security_Return_type returnStatus_Security;
+	uint8_t response_buffer[2];
+
+	HAL_UART_Receive(C_UART, &signature_command , SIGNATURE_VERIFICATION_CMD_SIZE , HAL_MAX_DELAY);
+	HAL_UART_Receive(C_UART, &signatureRec[0], SIGNATURE_SIZE, HAL_MAX_DELAY);
+
+	response_buffer[0] = signature_command;
+
+	returnStatus_Security = Calculate_Firmware_Hash(&outputDigest[0], current_logical_block_start_address, (uint16_t)current_logical_block_length);
+
+	if(returnStatus_Security == 0)
+	{
+		returnStatus_Security = Calculate_Signature(&outputDigest[0], &signatureRec[0]);
+		if(returnStatus_Security == 0)
+		{
+			returnStatus_Security = application_signature_write(&signatureRec[0]);
+
+			response_buffer[1] = returnStatus_Security;
+
+			bootloader_uart_response_data(&response_buffer[0], 2);
+
+			bootloader_jump_to_user_app();
+		}
+		else
+		{
+			response_buffer[1] = returnStatus_Security;
+
+			bootloader_uart_response_data(&response_buffer[0], 2);
+
+			NVIC_SystemReset();
+		}
+	}
+
+}
+
+
+/**
+  * @brief Signature erase function before flashing anu application
+  * @retval None
+  */
+HAL_StatusTypeDef erase_signature_area()
+{
+	FLASH_EraseInitTypeDef signature_area;
+	uint32_t pageError;
+	HAL_StatusTypeDef Erase_Status;
+
+	signature_area.TypeErase = FLASH_TYPEERASE_PAGES;
+	signature_area.PageAddress = (uint32_t)SIGNATURE_STORAGE_AREA;
+	signature_area.NbPages = 1;
+
+	Erase_Status = HAL_FLASHEx_Erase(&signature_area, &pageError);
+	return Erase_Status;
+
+}
+
+
+/**
+  * @brief Write Signature to dedicated flash area
+  * param[in]  Signature  Signature pointer which contains the currently flashing software signature
+  * @retval None
+  */
+Std_Security_Return_type application_signature_write(uint8_t* signature)
+{
+	uint8_t no_of_words = (SIGNATURE_SIZE/4U);
+	uint32_t* TempPtr = (uint32_t*)signature;
+	uint32_t storagePtr = (uint32_t)SIGNATURE_STORAGE_AREA;
+	HAL_StatusTypeDef returnStatus;
+
+	HAL_FLASH_Unlock();
+
+	for(int j = 0; j< no_of_words; j++)
+	{
+		returnStatus = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, storagePtr , TempPtr[j] );
+		if(returnStatus == HAL_OK)
+		{
+			storagePtr += 4;
+		}
+		else
+		{
+			return E_NOT_OK;
+		}
+	}
+
+	HAL_FLASH_Lock();
+
+	return E_OK;
+}
+
+
+/**
+  * @brief Security verification function before boot the application
+  * @retval None
+  */
+Std_Security_Return_type signature_check_boot(void)
+{
+	uint8_t outputDigest[32] __attribute__((aligned(4)));
+	Std_Security_Return_type returnStatus_Security;
+
+	returnStatus_Security = Calculate_Firmware_Hash(&outputDigest[0], APPLICATION_START_ADDRESS, (uint16_t)APPLCIATION_LENGTH);
+
+	if(returnStatus_Security == 0)
+	{
+		returnStatus_Security = Calculate_Signature(&outputDigest[0], SIGNATURE_PTR);
+	}
+	return returnStatus_Security;
+}
+
+
+/**
+  * @brief Writ protection logic for page number 20 and 21
+  * @retval None
+  */
+void Enable_Protection_Page20_21(void)
+{
+    FLASH_OBProgramInitTypeDef OBConfig;
+
+    // 1. Unlock Flash and Option Bytes
+    HAL_FLASH_Unlock();
+    HAL_FLASH_OB_Unlock();
+
+    // 2. Clear and Configure the structure
+    // Using the macro found in your main.h / stm32f3xx_hal_flash_ex.h
+    OBConfig.OptionType = OPTIONBYTE_WRP;
+    OBConfig.WRPState   = OB_WRPSTATE_ENABLE;
+    OBConfig.WRPPage    = OB_WRP_PAGES20TO21; // Bit 0x00000400U
+
+    // 3. Program the Option Bytes
+    if (HAL_FLASHEx_OBProgram(&OBConfig) != HAL_OK) {
+        // Error handling here
+        Error_Handler();
+    }
+
+    // 4. Launch the changes.
+    // WARNING: This will cause an immediate System Reset.
+    HAL_FLASH_OB_Launch();
+
+    /* The code below this line will never be reached because of the reset */
+    HAL_FLASH_OB_Lock();
+    HAL_FLASH_Lock();
+}
+
+/**
+  * @brief Print message via UART
+  * @retval None
+  */
+void printmsg(char *format,...)
+{
+#ifdef BL_DEBUG_MSG_EN
+	char str[80];
+
+	/* Extract the argument list using VA apis */
+	va_list args;
+	va_start(args, format);
+	vsprintf(str, format, args);
+	HAL_UART_Transmit(D_UART, (uint8_t*)str, strlen(str), HAL_MAX_DELAY);
+	va_end(args);
+#endif
+
+}
+
+

@@ -15,33 +15,48 @@
 #include "cmox_crypto.h"
 
 
-// 1. Define the ECC handle and the math engine
+/* Define the ECC handle and the math engine */
 cmox_ecc_handle_t EccCtx;
 
-// 2. Define a working area.
-// The size depends on the curve. For SECP256R1, 2KB is usually plenty.
+
+/* The size depends on the curve */
 #define ECC_WORKING_AREA_SIZE 2048
-//uint32_t WorkingArea[ECC_WORKING_AREA_SIZE / sizeof(uint32_t)];
 uint8_t WorkingArea[ECC_WORKING_AREA_SIZE / sizeof(uint8_t)] __attribute__((aligned(4)));
 
+
+
+/**
+  * @brief Call ECC Init function to intialize the working area
+  * @retval None
+  */
 void init_ecc_system(void) {
 
-    // Construct the ECC handle
+    /* Construct the ECC handle */
     cmox_ecc_construct(&EccCtx,                  // The handle
     					CMOX_MATH_FUNCS_FAST, // Math engine
                         WorkingArea,              // Buffer
                         sizeof(WorkingArea));     // Buffer size
 }
 
+
+/**
+  * @brief Calculation of hash
+  * param[in] uint32_t  startAddress    start address of data
+  * param[in] uint16_t  size            Length of hash calculation area
+  * param[out] uint8_t* output_digest	Hash output
+  * @retval None
+  */
 Std_Security_Return_type Calculate_Firmware_Hash(uint8_t *output_digest, uint32_t startAddress, uint16_t size)
 {
     cmox_hash_retval_t retval;
     size_t generated_length = 0;
 
-    /* 1. Create a pointer that looks directly at the Flash memory */
+    /* 1. Create a pointer that looks directly at the Flash memory
+     * 2. Execute the Single-Shot API
+     * 3. Check the result and set the return value
+     *  */
     const uint8_t *firmware_in_flash = (const uint8_t *)startAddress;
 
-    /* 2. Execute the Single-Shot API */
     retval = cmox_hash_compute(
         CMOX_SHA256_ALGO,          // The algorithm to use
         firmware_in_flash,         // Pointer directly to Flash memory
@@ -51,7 +66,6 @@ Std_Security_Return_type Calculate_Firmware_Hash(uint8_t *output_digest, uint32_
         &generated_length          // ST requires this parameter to confirm length
     );
 
-    /* 3. Check for success */
     if (retval != CMOX_HASH_SUCCESS)
     {
     	return SEC_NOT_OK;
@@ -62,10 +76,21 @@ Std_Security_Return_type Calculate_Firmware_Hash(uint8_t *output_digest, uint32_
     }
 }
 
+/**
+  * @brief Singature verification wrapper
+  * param[in]  uint8_t*  outputDigest    Input hash for signature verification
+  * param[in]  uint8_t*  signatureRec	 Signature input for verification
+  * @retval None
+  */
 Std_Security_Return_type Calculate_Signature(uint8_t* outputDigest, uint8_t* signatureRec)
 {
 	uint32_t fault_check = 0;
 	cmox_ecc_retval_t status;
+
+    /* 1. Call signature verifiaction function
+     * 2. Check the result and set the return value
+     *  */
+
 
 	status = cmox_ecdsa_verify(
 	    &EccCtx,                        // Your initialized ECC handle
@@ -79,7 +104,6 @@ Std_Security_Return_type Calculate_Signature(uint8_t* outputDigest, uint8_t* sig
 	    &fault_check                    // Fault check variable
 	);
 
-	// Strict check as per the library @note
 	if ((status == CMOX_ECC_AUTH_SUCCESS) && (fault_check == CMOX_ECC_AUTH_SUCCESS))
 	{
 	    return SEC_OK;

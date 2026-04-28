@@ -29,42 +29,8 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f3xx_hal.h"
 #include "secure_wrapper.h"
+#include "bl_function.h"
 
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
-
-
-/* USER CODE END Includes */
-
-/* Exported types ------------------------------------------------------------*/
-/* USER CODE BEGIN ET */
-
-/* USER CODE END ET */
-
-/* Exported constants --------------------------------------------------------*/
-/* USER CODE BEGIN EC */
-
-/* USER CODE END EC */
-
-/* Exported macro ------------------------------------------------------------*/
-/* USER CODE BEGIN EM */
-
-#define APPLICATION_IDENTIFIER       0x0808
-#define APPLICATION_START_ADDRESS    0x08020000U
-#define APPLCIATION_LENGTH           (32U*1024U)
-#define APPLICATION_RESET_HANDLER_ADDRESS   0x08020004U
-#define NO_OF_LOGICAL_BLOCK                1U
-
-typedef uint8_t  Std_Return_Type ;
-
-/* USER CODE END EM */
-
-/* Exported functions prototypes ---------------------------------------------*/
-void Error_Handler(void);
-
-/* USER CODE BEGIN EFP */
-
-/* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
 #define B1_Pin GPIO_PIN_13
@@ -81,68 +47,6 @@ void Error_Handler(void);
 #define TCK_GPIO_Port GPIOA
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
-
-/* USER CODE BEGIN Private defines */
-
-void printmsg(char *format,...);
-void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer);
-void bootloader_handle_flash_erase_cmd(uint8_t *pBuffer);
-void bootloader_handle_mem_write_cmd(uint8_t *pBuffer);
-void bootloader_handle_mem_verify(void);
-void bootloader_uart_read_data(void);
-void bootloader_jump_to_user_app(void);
-Std_Return_Type decode__erase_command(uint8_t* pBuffer, FLASH_EraseInitTypeDef* decoded_value);
-uint8_t get_bootloader_version(void);
-void bootloader_uart_response_data(uint8_t *pBuffer,uint32_t len);
-HAL_StatusTypeDef erase_signature_area(void);
-Std_Security_Return_type application_signature_write(uint8_t* signature);
-Std_Security_Return_type signature_check_boot();
-void Enable_Protection_Page20_21(void);
-
-
-
-
-//#define  <command name >  <command_code>
-
-//This command is used to read the bootloader version from the MCU
-#define BL_GET_VER        0x80
-
-//This command is used to mass erase or sector erase of the user flash .
-#define BL_FLASH_ERASE          0x81
-
-//This command is used to write data in to different memories of the MCU
-#define BL_MEM_WRITE_PREPARE      0x82
-
-#define BL_MEM_WRITE             0x83
-
-
-
-#define BL_VERSION 0x10
-
-#define E_OK    0x00
-#define E_NOT_OK  0x01
-
-
-#define BL_ERASE_SUCCESS   0x00
-#define BL_ERASE_FAILURE   0x01
-
-#define BL_RX_LEN  10U
-#define BL_DEBUG_MSG_EN
-#define BL_MESSAGE_CHUNK_LENGTH  256U
-#define TOTAL_NO_WORDS   (256U/4U)
-
-struct logical_block_def
-{
-	uint16_t identifier;
-	uint32_t start_address;
-	uint16_t length;
-};
-
-struct logical_block_info
-{
-	uint8_t no_of_blocks;
-	struct logical_block_def block_info[NO_OF_LOGICAL_BLOCK];
-};
 
 
 

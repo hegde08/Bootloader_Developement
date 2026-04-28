@@ -88,7 +88,8 @@ Core/Src/stm32f3xx_it.o: ../Core/Src/stm32f3xx_it.c ../Core/Inc/main.h \
  ../STM32_Cryptographic/include/drbg/cmox_drbg_retvals.h \
  ../STM32_Cryptographic/include/utils/cmox_utils_compare.h \
  ../STM32_Cryptographic/include/cmox_info.h \
- ../STM32_Cryptographic/include/cmox_init.h ../Core/Inc/stm32f3xx_it.h
+ ../STM32_Cryptographic/include/cmox_init.h ../Core/Inc/bl_function.h \
+ ../Core/Inc/stm32f3xx_it.h
 ../Core/Inc/main.h:
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal.h:
 ../Core/Inc/stm32f3xx_hal_conf.h:
@@ -180,4 +181,5 @@ Core/Src/stm32f3xx_it.o: ../Core/Src/stm32f3xx_it.c ../Core/Inc/main.h \
 ../STM32_Cryptographic/include/utils/cmox_utils_compare.h:
 ../STM32_Cryptographic/include/cmox_info.h:
 ../STM32_Cryptographic/include/cmox_init.h:
+../Core/Inc/bl_function.h:
 ../Core/Inc/stm32f3xx_it.h:

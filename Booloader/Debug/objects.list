@@ -1,3 +1,4 @@
+"./Core/Src/bl_function.o"
 "./Core/Src/cmox_low_level.o"
 "./Core/Src/main.o"
 "./Core/Src/secure_wrapper.o"
